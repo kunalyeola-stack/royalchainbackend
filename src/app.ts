@@ -19,8 +19,8 @@ app.use(morgan('dev'));
 
 
 (async () => {
-    initializeDatabase();
-    await initializeKafka();
+    // initializeDatabase();
+    // await initializeKafka();
     // await initializeRedis();
 })
 
