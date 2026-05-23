@@ -6,7 +6,7 @@ import { initializeDatabase } from './infrastructure/database/init-db';
 import { initializeKafka } from './infrastructure/kafka/kafka.initialize';
 // import { initializeRedis } from './infrastructure/redis/redis.client';
 
-// import userRoutes from './adapters/routes/user.routes';
+import userRoutes from './adapters/routes/user.routes';
 
 const app = express();
 
@@ -15,7 +15,7 @@ app.use(cors());
 app.use(helmet());
 app.use(morgan('dev'));
 
-// app.use('/api/users', userRoutes);
+app.use('/api/users', userRoutes);
 
 
 (async () => {
