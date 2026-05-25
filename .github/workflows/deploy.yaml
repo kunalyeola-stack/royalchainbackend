@@ -38,6 +38,7 @@ jobs:
           gcloud builds submit \
             --tag $IMAGE:${{ github.sha }} \
             --project $PROJECT_ID \
+            --suppress-logs \
             .
 
       - name: Get GKE credentials
