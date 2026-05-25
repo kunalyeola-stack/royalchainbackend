@@ -33,12 +33,27 @@ jobs:
       - name: Configure Docker
         run: gcloud auth configure-docker us-docker.pkg.dev --quiet
 
-      # ✅ Replaces gcloud builds submit — no Cloud Build, no GCS bucket needed
+      - name: Get latest image tag
+        id: get_tag
+        run: |
+          LATEST=$(gcloud artifacts docker tags list \
+            us-docker.pkg.dev/$PROJECT_ID/royal-chain-backend/node-js-backend \
+            --format="get(tag)" \
+            2>/dev/null | grep -E '^[0-9]+$' | sort -n | tail -1)
+
+          if [ -z "$LATEST" ]; then
+            LATEST=0
+          fi
+
+          NEW_TAG=$((LATEST + 1))
+          echo "new_tag=$NEW_TAG" >> $GITHUB_OUTPUT
+          echo "Latest: $LATEST → New: $NEW_TAG"
+
       - name: Build Docker image
-        run: docker build -t $IMAGE:${{ github.sha }} .
+        run: docker build -t $IMAGE:${{ steps.get_tag.outputs.new_tag }} .
 
       - name: Push Docker image
-        run: docker push $IMAGE:${{ github.sha }}
+        run: docker push $IMAGE:${{ steps.get_tag.outputs.new_tag }}
 
       - name: Get GKE credentials
         uses: google-github-actions/get-gke-credentials@v2
@@ -49,5 +64,6 @@ jobs:
       - name: Deploy to GKE
         run: |
           kubectl set image deployment/node-js-backend \
-            node-js-backend-sha256-1=$IMAGE:${{ github.sha }}
+            node-js-backend-sha256-1=$IMAGE:${{ steps.get_tag.outputs.new_tag }}
           kubectl rollout status deployment/node-js-backend
+          echo "✅ Deployed version ${{ steps.get_tag.outputs.new_tag }}"
