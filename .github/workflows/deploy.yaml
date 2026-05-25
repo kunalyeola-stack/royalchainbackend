@@ -1,0 +1,53 @@
+name: Deploy to GKE
+
+on:
+  push:
+    branches:
+      - uat
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GKE_CLUSTER: ${{ secrets.GKE_CLUSTER }}
+  GKE_ZONE: ${{ secrets.GKE_ZONE }}
+  IMAGE: us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/royal-chain-backend/node-js-backend
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          install_components: gke-gcloud-auth-plugin
+
+      - name: Configure Docker
+        run: gcloud auth configure-docker us-docker.pkg.dev --quiet
+
+      - name: Build and Push image
+        run: |
+          gcloud builds submit \
+            --tag $IMAGE:${{ github.sha }} \
+            --project $PROJECT_ID \
+            .
+
+      - name: Get GKE credentials
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ env.GKE_CLUSTER }}
+          location: ${{ env.GKE_ZONE }}
+
+      - name: Deploy to GKE
+        run: |
+          kubectl set image deployment/node-js-backend \
+            node-js-backend-sha256-1=$IMAGE:${{ github.sha }}
+          kubectl rollout status deployment/node-js-backend                                      
